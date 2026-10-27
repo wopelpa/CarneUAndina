@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Consulta de entrega de carné</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f1;--panel:#fff;--ink:#1c2430;--mute:#5d6875;--line:#d8ddd7;--ok:#0f6b4f;--okbg:#dff1e8;--pe:#9a5b00;--pebg:#fbebcf;--acc:#17324d;--err:#a52a2a}
+@media (prefers-color-scheme:dark){:root{--bg:#12171d;--panel:#1b222b;--ink:#e8ecef;--mute:#9aa5b1;--line:#2c3541;--ok:#5fd0a3;--okbg:#17372b;--pe:#f0b44c;--pebg:#3a2c10;--acc:#7fb0e0;--err:#ff8f8f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;background:var(--acc);color:#fff;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+header a,header button{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:6px 12px;text-decoration:none;font:inherit;font-size:14px;cursor:pointer}
+main{max-width:980px;margin:24px auto;padding:0 16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px}
+.narrow{max-width:520px;margin:48px auto}
+label{display:block;font-size:14px;color:var(--mute);margin:12px 0 4px}
+input,select,button.pri{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);cursor:pointer;font-weight:500;margin-top:16px}
+html:not(.x) button.pri{color:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+.msg{padding:12px 14px;border-radius:6px;margin-top:16px}
+.msg.ok{background:var(--okbg);color:var(--ok)}.msg.pe{background:var(--pebg);color:var(--pe)}.msg.err{background:var(--pebg);color:var(--err)}
+.msg b{display:block;font-size:17px;margin-bottom:2px}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;color:var(--mute);cursor:pointer}
+.tabs button.on{color:var(--ink);border-color:var(--acc);font-weight:600}
+.seg{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.seg button{font:inherit;font-size:14px;padding:6px 14px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);cursor:pointer}.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.b.du{background:transparent;border:1px solid var(--acc);color:var(--acc);margin-left:6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+.kpi small{color:var(--mute)}.kpi div{font-size:30px;font-weight:600}
+.dash{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:center}
+@media(max-width:640px){.dash{grid-template-columns:1fr}}
+.bar{margin:10px 0}.bar .t{display:flex;justify-content:space-between;font-size:14px;gap:8px}
+.track{height:12px;background:var(--pebg);border-radius:6px;overflow:hidden}.fill{height:100%;background:var(--ok)}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mute);font-weight:500}
+.b{display:inline-block;padding:2px 10px;border-radius:12px;font-size:13px}.b.ok{background:var(--okbg);color:var(--ok)}.b.pe{background:var(--pebg);color:var(--pe)}
+td button{font:inherit;font-size:13px;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+td button.go{background:var(--ok);border-color:var(--ok);color:#fff}
+@media (prefers-color-scheme:dark){td button.go{color:#10231b}}
+.hint{color:var(--mute);font-size:14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+/* ===== CONFIGURACIÓN: pegue aquí los datos de su proyecto (Supabase > Project Settings > API) ===== */
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_KEY = 'TU_ANON_PUBLIC_KEY';   // la clave "anon public" (NO la service_role)
+const DOMINIO = '@carne.app';                  // igual que en la Edge Function
+const SEDES = ['CUSCO', 'PUERTO MALDONADO', 'QUILLABAMBA', 'SICUANI'];
+/* ================================================================================================= */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const app = document.getElementById('app');
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SMALL = ['de', 'del', 'la', 'y', 'en', 'e'];
+const tit = (s) => (s || '').toLowerCase().split(' ').map((w, i) => i && SMALL.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+const isEnt = (e) => (e || '').toLowerCase() === 'entregado';
+const isPen = (e) => (e || '').toLowerCase() === 'pendiente';
+
+let perfil = null, resumen = [], tab = 'resumen';
+
+/* ---------- Consulta pública ---------- */
+function vistaPublica() {
+  app.innerHTML = `
+  <header><h1>Consulta de entrega de carné</h1><a href="#acceso">Acceso del personal</a></header>
+  <main><div class="card narrow">
+    <h2 style="margin-top:0">Consulte el estado de su carné</h2>
+    <form id="f"><label for="cod">Código de alumno</label>
+    <input id="cod" maxlength="15" autocomplete="off" placeholder="Ejemplo: 026200005H" required>
+    <button class="pri">Consultar</button></form>
+    <div id="res" aria-live="polite"></div>
+  </div></main>`;
+  $('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    const r = $('#res'); r.innerHTML = '<p class="hint">Consultando…</p>';
+    const { data, error } = await sb.rpc('consultar_estado', { p_codigo: $('#cod').value });
+    if (error) { r.innerHTML = '<div class="msg err">No se pudo realizar la consulta. Intente nuevamente en unos minutos.</div>'; return; }
+    if (!data.length) { r.innerHTML = '<div class="msg err"><b>Código no encontrado</b>Verifique que lo escribió completo, con la letra final.</div>'; return; }
+    r.innerHTML = data.map(d => {
+      const dup = d.tipo === 'Duplicado', cosa = dup ? 'duplicado de carné' : 'carné';
+      const lugar = `en la Escuela Profesional de ${esc(tit(d.escuela))}, sede de ${esc(tit(d.sede))}`;
+      if (isPen(d.estado)) return `<div class="msg pe"><b>${dup ? 'Duplicado · ' : ''}Pendiente</b>Su ${cosa} se encuentra pendiente de recojo por parte del alumno ${lugar}.</div>`;
+      if (isEnt(d.estado)) return `<div class="msg ok"><b>${dup ? 'Duplicado · ' : ''}Entregado</b>Su ${cosa} ya fue entregado.</div>`;
+      return `<div class="msg pe"><b>${esc(d.estado)}</b>Comuníquese con su Escuela Profesional.</div>`;
+    }).join('');
+  };
+}
+
+/* ---------- Login ---------- */
+function vistaLogin() {
+  app.innerHTML = `
+  <header><h1>Acceso del personal</h1><a href="#">Volver a la consulta</a></header>
+  <main><div class="card narrow"><form id="f">
+    <label for="u">Usuario</label><input id="u" autocomplete="username" required>
+    <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
+    <button class="pri">Ingresar</button><div id="m"></div></form></div></main>`;
+  $('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: (u => u.includes('@') ? u : u + DOMINIO)($('#u').value.trim().toLowerCase()), password: $('#p').value });
+    if (error) { $('#m').innerHTML = '<div class="msg err">Usuario o contraseña incorrectos.</div>'; return; }
+    route();
+  };
+}
+
+/* ---------- Panel ---------- */
+async function vistaPanel() {
+  const alcance = perfil.rol === 'admin' ? 'Administrador · todas las sedes'
+    : `Sede ${tit(perfil.sede)} · ${perfil.escuela ? tit(perfil.escuela) : 'todas las escuelas'}`;
+  app.innerHTML = `
+  <header><div><h1>${esc(perfil.nombre || perfil.usuario)}</h1><small>${esc(alcance)}</small></div>
+  <button id="out">Cerrar sesión</button></header>
+  <main><div class="tabs" id="tabs"></div><div id="body"></div></main>`;
+  $('#out').onclick = async () => { await sb.auth.signOut(); location.hash = ''; };
+  const t = [['resumen', 'Resumen'], ['alumnos', 'Alumnos']];
+  if (perfil.rol === 'admin') t.push(['usuarios', 'Usuarios']);
+  $('#tabs').innerHTML = t.map(([k, n]) => `<button data-k="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
+  $('#tabs').onclick = (e) => { if (e.target.dataset.k) { tab = e.target.dataset.k; vistaPanel(); } };
+  const { data } = await sb.rpc('mi_resumen'); resumen = data || [];
+  ({ resumen: tabResumen, alumnos: tabAlumnos, usuarios: tabUsuarios })[tab]();
+}
+
+let vt = '';
+function tabResumen() {
+  const rows = resumen.filter(r => !vt || r.tipo === vt);
+  const suma = (rs, f = () => true) => rs.filter(f).reduce((a, r) => a + Number(r.total), 0);
+  const tot = suma(rows), ent = suma(rows, r => isEnt(r.estado)), pen = tot - ent;
+  const pct = tot ? Math.round(ent * 1000 / tot) / 10 : 0;
+  const g = {};
+  rows.forEach(r => { const k = r.sede + '|' + r.escuela; g[k] ??= { sede: r.sede, escuela: r.escuela, t: 0, e: 0 }; g[k].t += Number(r.total); if (isEnt(r.estado)) g[k].e += Number(r.total); });
+  const filas = Object.values(g).sort((a, b) => (a.sede + a.escuela).localeCompare(b.sede + b.escuela));
+  const etq = (x) => perfil.rol === 'admin' ? `${tit(x.sede)} · ${tit(x.escuela)}` : tit(x.escuela);
+  const det = ['Regular', 'Duplicado'].map(t => { const x = resumen.filter(r => r.tipo === t); return `${t === 'Regular' ? 'Regulares' : 'Duplicados'}: ${suma(x, r => isEnt(r.estado))} de ${suma(x)} entregados`; }).join(' · ');
+  $('#body').innerHTML = `
+  <div class="seg" id="seg">${[['', 'Todos'], ['Regular', 'Regulares'], ['Duplicado', 'Duplicados']].map(([k, n]) => `<button data-k="${k}" class="${k === vt ? 'on' : ''}">${n}</button>`).join('')}</div>
+  <div class="kpis"><div class="kpi"><small>Total de carnés</small><div>${tot}</div></div>
+  <div class="kpi"><small>Entregados</small><div style="color:var(--ok)">${ent}</div></div>
+  <div class="kpi"><small>Pendientes</small><div style="color:var(--pe)">${pen}</div></div></div>
+  ${vt ? '' : `<p class="hint">${det}</p>`}
+  <div class="card dash">
+    <svg viewBox="0 0 42 42" width="220" height="220" role="img" aria-label="${pct}% entregado">
+      <circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--pebg)" stroke-width="6"/>
+      <circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="25"/>
+      <text x="21" y="22.5" text-anchor="middle" font-size="6.5" font-weight="600" fill="var(--ink)">${pct}%</text>
+      <text x="21" y="28" text-anchor="middle" font-size="3" fill="var(--mute)">entregado</text></svg>
+    <div>${filas.length > 1 ? filas.map(x => `<div class="bar"><div class="t"><span>${esc(etq(x))}</span><span>${x.e} de ${x.t}</span></div>
+      <div class="track"><div class="fill" style="width:${x.t ? x.e * 100 / x.t : 0}%"></div></div></div>`).join('')
+      : '<p class="hint">Los entregados aparecen en verde y los pendientes en ámbar.</p>'}</div>
+  </div>`;
+  $('#seg').onclick = (e) => { if (e.target.dataset.k !== undefined) { vt = e.target.dataset.k; tabResumen(); } };
+}
+
+function tabAlumnos() {
+  const multi = perfil.rol === 'admin' || !perfil.escuela;
+  $('#body').innerHTML = `
+  <div class="card"><div class="row">
+    <input id="q" placeholder="Buscar por código o apellidos" aria-label="Buscar">
+    <select id="fe" aria-label="Estado"><option value="">Todos los estados</option><option>Pendiente</option><option>Entregado</option></select>
+    <select id="ft" aria-label="Tipo"><option value="">Regulares y duplicados</option><option value="Regular">Solo regulares</option><option value="Duplicado">Solo duplicados</option></select></div>
+    <p class="hint" id="info"></p><div class="scroll"><table><thead><tr><th>Código</th><th>Apellidos y nombres</th>${multi ? '<th>Escuela</th>' : ''}<th>Estado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div></div>`;
+  let tm; const buscar = async () => {
+    let q = sb.from('alumnos').select('id,codigo,nombre,escuela,sede,tipo,estado,fecha_entrega').order('nombre').limit(200);
+    const t = $('#q').value.trim().replace(/[,%()*]/g, ' ').trim();
+    if (t) q = q.or(`codigo.ilike.%${t}%,nombre.ilike.%${t}%`);
+    if ($('#fe').value) q = q.eq('estado', $('#fe').value);
+    if ($('#ft').value) q = q.eq('tipo', $('#ft').value);
+    const { data, error } = await q;
+    if (error) { $('#info').textContent = 'Error al cargar los datos.'; return; }
+    $('#info').textContent = data.length === 200 ? 'Mostrando los primeros 200. Use el buscador para acotar.' : `${data.length} resultado(s)`;
+    $('#tb').innerHTML = data.map(a => `<tr><td>${esc(a.codigo)}${a.tipo === 'Duplicado' ? '<span class="b du">Duplicado</span>' : ''}</td><td>${esc(a.nombre)}</td>
+      ${multi ? `<td>${esc(tit(a.escuela))}${perfil.rol === 'admin' ? ' · ' + esc(tit(a.sede)) : ''}</td>` : ''}
+      <td><span class="b ${isEnt(a.estado) ? 'ok' : 'pe'}">${esc(a.estado)}</span>${a.fecha_entrega ? `<br><small class="hint">${new Date(a.fecha_entrega).toLocaleString('es-PE')}</small>` : ''}</td>
+      <td><button class="${isEnt(a.estado) ? '' : 'go'}" data-id="${a.id}" data-n="${esc(a.nombre)}" data-d="${a.tipo === 'Duplicado' ? 1 : 0}" data-e="${isEnt(a.estado) ? 1 : 0}">${isEnt(a.estado) ? 'Deshacer' : 'Registrar entrega'}</button></td></tr>`).join('');
+  };
+  $('#q').oninput = () => { clearTimeout(tm); tm = setTimeout(buscar, 300); };
+  $('#fe').onchange = buscar; $('#ft').onchange = buscar;
+  $('#tb').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const ya = b.dataset.e === '1', cosa = b.dataset.d === '1' ? 'duplicado de carné' : 'carné';
+    if (!confirm(ya ? `¿Deshacer la entrega del ${cosa} de ${b.dataset.n}?` : `¿Registrar la entrega del ${cosa} a ${b.dataset.n}?`)) return;
+    const { error } = await sb.from('alumnos').update({ estado: ya ? 'Pendiente' : 'Entregado' }).eq('id', b.dataset.id);
+    if (error) { alert('No se pudo guardar: ' + error.message); return; }
+    buscar();
+  };
+  buscar();
+}
+
+async function adm(body) {
+  const { data, error } = await sb.functions.invoke('admin-usuarios', { body });
+  if (error) { let m = error.message; try { m = (await error.context.json()).error || m; } catch { } throw new Error(m); }
+  return data;
+}
+
+async function tabUsuarios() {
+  const escuelasDe = (sede) => [...new Set(resumen.filter(r => r.sede.toUpperCase() === sede.toUpperCase()).map(r => r.escuela))].sort();
+  const { data: ps } = await sb.from('perfiles').select('*').order('usuario');
+  $('#body').innerHTML = `
+  <div class="card"><h2 style="margin-top:0">Crear usuario</h2>
+  <form id="f"><div class="row">
+    <div><label>Usuario</label><input id="nu" required minlength="3" autocomplete="off"></div>
+    <div><label>Contraseña</label><input id="np" required minlength="6" autocomplete="new-password"></div>
+    <div><label>Nombre (opcional)</label><input id="nn"></div></div>
+  <div class="row">
+    <div><label>Rol</label><select id="nr"><option value="usuario">Usuario de entrega</option><option value="admin">Administrador</option></select></div>
+    <div class="alc"><label>Sede</label><select id="ns">${SEDES.map(s => `<option>${s}</option>`).join('')}</select></div>
+    <div class="alc"><label>Escuela</label><select id="ne"></select></div></div>
+  <p class="hint">En Cusco asigne una escuela por usuario. En las otras sedes elija «Todas las escuelas de la sede».</p>
+  <button class="pri">Crear usuario</button><div id="m"></div></form></div>
+  <div class="card" style="margin-top:16px"><h2 style="margin-top:0">Usuarios</h2><div class="scroll"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Sede</th><th>Escuela</th><th></th></tr></thead><tbody id="ut">
+  ${(ps || []).map(p => `<tr><td>${esc(p.usuario)}</td><td>${p.rol === 'admin' ? 'Administrador' : 'Entrega'}</td><td>${esc(tit(p.sede) || '—')}</td><td>${p.rol === 'admin' ? '—' : esc(p.escuela ? tit(p.escuela) : 'Todas')}</td>
+  <td><button data-a="pw" data-id="${p.user_id}">Cambiar contraseña</button> <button data-a="del" data-id="${p.user_id}" data-u="${esc(p.usuario)}">Eliminar</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  const llenar = () => { const s = $('#ns').value, esc_ = escuelasDe(s);
+    $('#ne').innerHTML = (s === 'CUSCO' ? '' : '<option value="">Todas las escuelas de la sede</option>') + esc_.map(x => `<option value="${esc(x)}">${esc(tit(x))}</option>`).join(''); };
+  const rol = () => document.querySelectorAll('.alc').forEach(d => d.style.display = $('#nr').value === 'admin' ? 'none' : '');
+  $('#ns').onchange = llenar; $('#nr').onchange = rol; llenar(); rol();
+  $('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await adm({ accion: 'crear', usuario: $('#nu').value, password: $('#np').value, nombre: $('#nn').value, rol: $('#nr').value, sede: $('#ns').value, escuela: $('#ne').value });
+      tabUsuarios();
+    } catch (er) { $('#m').innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+  };
+  $('#ut').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    try {
+      if (b.dataset.a === 'pw') { const p = prompt('Nueva contraseña (mínimo 6 caracteres):'); if (!p) return; await adm({ accion: 'password', user_id: b.dataset.id, password: p }); alert('Contraseña actualizada.'); }
+      else if (confirm(`¿Eliminar el usuario ${b.dataset.u}?`)) { await adm({ accion: 'eliminar', user_id: b.dataset.id }); tabUsuarios(); }
+    } catch (er) { alert(er.message); }
+  };
+}
+
+/* ---------- Rutas ---------- */
+async function route() {
+  if (location.hash !== '#acceso') return vistaPublica();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return vistaLogin();
+  const { data } = await sb.from('perfiles').select('*').eq('user_id', session.user.id).maybeSingle();
+  if (!data) { await sb.auth.signOut(); return vistaLogin(); }
+  perfil = data; vistaPanel();
+}
+addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
