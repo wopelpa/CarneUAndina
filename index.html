@@ -207,10 +207,13 @@ function tabAlumnos() {
   buscar();
 }
 
-async function adm(body) {
-  const { data, error } = await sb.functions.invoke('admin-usuarios', { body });
-  if (error) { let m = error.message; try { m = (await error.context.json()).error || m; } catch { } throw new Error(m); }
-  return data;
+async function adm(b) {
+  let r;
+  if (b.accion === 'crear') r = await sb.rpc('admin_crear_usuario', { p_usuario: b.usuario, p_password: b.password, p_nombre: b.nombre || '', p_rol: b.rol, p_sede: b.sede || '', p_escuela: b.escuela || '' });
+  else if (b.accion === 'password') r = await sb.rpc('admin_cambiar_password', { p_user_id: b.user_id, p_password: b.password });
+  else r = await sb.rpc('admin_eliminar_usuario', { p_user_id: b.user_id });
+  if (r.error) throw new Error(r.error.message);
+  return r.data;
 }
 
 async function tabUsuarios() {
