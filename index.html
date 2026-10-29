@@ -158,7 +158,8 @@ async function vistaPanel() {
   if (perfil.rol === 'admin') t.push(['usuarios', 'Usuarios']);
   $('#tabs').innerHTML = t.map(([k, n]) => `<button data-k="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
   $('#tabs').onclick = (e) => { if (e.target.dataset.k) { tab = e.target.dataset.k; vistaPanel(); } };
-  const { data } = await sb.rpc('mi_resumen'); resumen = data || [];
+  const { data, error } = await sb.rpc('mi_resumen'); resumen = data || [];
+  if (error && tab === 'resumen') { $('#body').innerHTML = `<div class="msg err"><b>No se pudo cargar el resumen</b>${esc(error.message)}. Actualice la página e intente nuevamente.</div>`; return; }
   ({ resumen: tabResumen, alumnos: tabAlumnos, usuarios: tabUsuarios })[tab]();
 }
 
