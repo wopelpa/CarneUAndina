@@ -117,7 +117,7 @@ function vistaPublica() {
     const r = $('#res'); r.innerHTML = '<p class="hint">Consultando…</p>';
     const { data, error } = await sb.rpc('consultar_estado', { p_codigo: $('#cod').value });
     if (error) { r.innerHTML = '<div class="msg err">No se pudo realizar la consulta. Intente nuevamente en unos minutos.</div>'; return; }
-    if (!data.length) { r.innerHTML = '<div class="msg err"><b>Código no encontrado</b>Verifique que lo escribió completo, con la letra final.</div>'; return; }
+    if (!data.length) { r.innerHTML = '<div class="msg err"><b>Código no encontrado</b>Usted no solicito el carné universitario del año 2026</div>'; return; }
     r.innerHTML = data.map(d => {
       const dup = d.tipo === 'Duplicado', cosa = dup ? 'duplicado de carné' : 'carné';
       const pre = (d.semestre ? esc(d.semestre) + ' · ' : '') + (dup ? 'Duplicado · ' : '');
